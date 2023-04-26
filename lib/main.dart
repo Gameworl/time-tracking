@@ -6,6 +6,7 @@ import 'package:timer_team/nameObject.dart';
 
 import 'DateTimeObject.dart';
 import 'database.dart';
+import 'mainV2.dart';
 
 void main() {
   runApp(const MyApp());
@@ -22,7 +23,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage2(title: 'Flutter Demo Home Page'),
     );
   }
 }
