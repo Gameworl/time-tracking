@@ -23,18 +23,18 @@ class DatabaseHelper {
       version: 1,
       onCreate: (db, version) async {
         await db.execute('''
-          CREATE TABLE datetime(
-            id INTEGER PRIMARY KEY,
-            nameId INTEGER,
-            date INTEGER,
-            time INTEGER
-          )
-        ''');
-        await db.execute('''
-           CREATE TABLE name(
+           CREATE TABLE Name(
             id INTEGER PRIMARY KEY,
             firstName TEXT,
             lastName TEXT
+          )
+        ''');
+        await db.execute('''
+          CREATE TABLE Datetime(
+            id INTEGER PRIMARY KEY,
+            nameId INTEGER FOREIGN KEY REFERENCES Name(id),
+            date INTEGER,
+            time INTEGER
           )
         ''');
       },

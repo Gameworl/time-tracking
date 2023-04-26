@@ -44,7 +44,6 @@ class _MyHomePageState extends State<MyHomePage> {
   final _formKey = GlobalKey<FormState>();
   String _firstName = '';
   String _lastName = '';
-  bool _showPopup = false;
   List<StopWatchTimer> listTimer = [];
   List<bool> timerStart = [];
   List<bool> dayOver = [];
@@ -62,6 +61,7 @@ class _MyHomePageState extends State<MyHomePage> {
   getAllName() {
     int nb;
     databaseHelper.getAllName().then((value) => name = value).then((value) => {
+          print(value),
           nb = name.length - listTimer.length,
           if (name.length > listTimer.length)
             {
@@ -101,18 +101,88 @@ class _MyHomePageState extends State<MyHomePage> {
     return databaseHelper.getDateTimeObject(id);
   }
 
+  popUpAddPerson() {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Enter your name'),
+            content: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'First name'),
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Please enter your first name';
+                      }
+                      return null;
+                    },
+                    onSaved: (value) {
+                      _firstName = value!;
+                    },
+                  ),
+                  TextFormField(
+                    decoration: const InputDecoration(labelText: 'Last name'),
+                    validator: (value) {
+                      if (value!.isEmpty) {
+                        return 'Please enter your last name';
+                      }
+                      return null;
+                    },
+                    onSaved: (value) {
+                      _lastName = value!;
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: const Text('Leave'),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              ),
+              TextButton(
+                child: const Text('Validate'),
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    _formKey.currentState!.save();
+                    final nameObject = NameObject(
+                      firstName: _firstName,
+                      lastName: _lastName,
+                    );
+                    databaseHelper.insertName(nameObject).then((value) {
+                      getAllName();
+                      Navigator.pop(context);
+                    });
+                  }
+                },
+              ),
+            ],
+          );
+        });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: Container(
-      height: MediaQuery.of(context).size.height,
-      child: Stack(
-        children: [
-          Positioned(
-            top: 120,
-            child: SizedBox(
-              height: 800,
-              width: MediaQuery.of(context).size.width,
+      body: Container(
+        margin: const EdgeInsets.only(left: 30, top: 50, right: 30, bottom: 50),
+        height: MediaQuery.of(context).size.height - 100,
+        child: Flex(
+          direction: Axis.vertical,
+          children: [
+            OutlinedButton(
+              onPressed: () => popUpAddPerson(),
+              child: const Text("Ajouter une personne"),
+            ),
+            Flexible(
+              flex: 5,
+              fit: FlexFit.tight,
               child: ListView.builder(
                 itemCount: name.length,
                 itemBuilder: (context, index) {
@@ -178,24 +248,12 @@ class _MyHomePageState extends State<MyHomePage> {
                 },
               ),
             ),
-          ),
-          Positioned(
-              top: 100,
-              left: 30,
-              child: OutlinedButton(
-                onPressed: () => {
-                  setState(() => {_showPopup = true})
-                },
-                child: Text("Ajouter une personne"),
-              )),
-          Positioned(
-            top: 600,
-            child: Column(
+            Column(
               children: [
-                Text("WeekTime"),
+                const Text("WeekTime"),
                 SizedBox(
-                  height: 800,
                   width: MediaQuery.of(context).size.width,
+                  height: 60,
                   child: ListView.builder(
                     itemCount: name.length,
                     scrollDirection: Axis.horizontal,
@@ -219,72 +277,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 ),
               ],
             ),
-          ),
-          if (_showPopup)
-            AlertDialog(
-              title: Text('Enter your name'),
-              content: Form(
-                key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      decoration: InputDecoration(labelText: 'First name'),
-                      validator: (value) {
-                        if (value!.isEmpty) {
-                          return 'Please enter your first name';
-                        }
-                        return null;
-                      },
-                      onSaved: (value) {
-                        _firstName = value!;
-                      },
-                    ),
-                    TextFormField(
-                      decoration: InputDecoration(labelText: 'Last name'),
-                      validator: (value) {
-                        if (value!.isEmpty) {
-                          return 'Please enter your last name';
-                        }
-                        return null;
-                      },
-                      onSaved: (value) {
-                        _lastName = value!;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  child: Text('Leave'),
-                  onPressed: () {
-                    setState(() {
-                      _showPopup = false;
-                    });
-                  },
-                ),
-                TextButton(
-                  child: Text('Validate'),
-                  onPressed: () async {
-                    if (_formKey.currentState!.validate()) {
-                      _formKey.currentState!.save();
-                      final nameObject = NameObject(
-                        firstName: _firstName,
-                        lastName: _lastName,
-                      );
-                      await databaseHelper.insertName(nameObject);
-                      getAllName();
-                      setState(() {
-                        _showPopup = false;
-                      });
-                    }
-                  },
-                ),
-              ],
-            ),
-        ],
+          ],
+        ),
       ),
-    ));
+    );
   }
 }
