@@ -8,16 +8,16 @@ import 'package:timer_team/models/week_timer_object.dart';
 class FireDatabase {
   DatabaseReference ref = FirebaseDatabase.instance.ref();
 
-  Future<List<UserObject>> addUser({
+  Future<String> addUser({
     required UserObject nameObject,
-  }) {
+  }) async {
     final newChildRef =
         ref.child("users").push(); // generates a new child with a unique ID
-    newChildRef.set({
+    await newChildRef.set({
       'firstname': nameObject.firstName,
       'lastname': nameObject.lastName,
     });
-    return getAllUsers();
+    return Future.value(newChildRef.key);
   }
 
   Future<List<UserObject>> getAllUsers() async {
@@ -25,7 +25,10 @@ class FireDatabase {
     Map? usersFirebase;
     DataSnapshot refUsersGet = await ref.child("users").get();
     usersFirebase = refUsersGet.value as Map?;
+    print(usersFirebase);
     if (usersFirebase != null) {
+      usersFirebase = Map.fromEntries(usersFirebase.entries.toList()
+        ..sort((e1, e2) => e1.key.compareTo(e2.key)));
       usersFirebase.forEach((key, value) {
         List<MonthTimerObject> listMonthTimerObject = [];
         (value["month"] as Map?)?.forEach((keyMonth, valueMonth) {
@@ -58,6 +61,44 @@ class FireDatabase {
       });
     }
     return Future.value(users);
+  }
+
+  Future<UserObject> getUser({required UserObject user}) async {
+    Map? userFirebase;
+    DataSnapshot refUsersGet = await ref.child("users/${user.id}").get();
+    userFirebase = refUsersGet.value as Map?;
+
+    if (userFirebase != null) {
+      List<MonthTimerObject> listMonthTimerObject = [];
+      (userFirebase["month"] as Map?)?.forEach((keyMonth, valueMonth) {
+        List<WeekTimerObject> listWeekTimerObject = [];
+        (valueMonth["week"] as Map?)?.forEach((keyWeek, valueWeek) {
+          List<DayTimerObject> listDayTimerObject = [];
+          (valueWeek["day"] as Map?)?.forEach((keyDay, valueDay) {
+            listDayTimerObject.add(DayTimerObject(
+                id: keyDay, timerDurationDay: valueDay['timerDurationDay']));
+          });
+          listWeekTimerObject.add(WeekTimerObject(
+              id: keyWeek,
+              timerDurationWeek: valueWeek['timerDurationWeek'],
+              isFourDaysWeek: valueWeek['isFourDaysWeek'],
+              dayTimerObject: listDayTimerObject));
+        });
+        listMonthTimerObject.add(MonthTimerObject(
+            id: keyMonth,
+            timerDurationMonth: valueMonth['timerDurationMonth'],
+            weekTimerObject: listWeekTimerObject));
+      });
+
+      user = UserObject(
+          id: user.id,
+          firstName: userFirebase["firstname"],
+          lastName: userFirebase["lastname"],
+          monthTimerObject: listMonthTimerObject);
+      return Future.value(user);
+    } else {
+      return Future.value(user);
+    }
   }
 
   int _weeksBetween(DateTime from, DateTime to) {
