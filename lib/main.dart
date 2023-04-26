@@ -1,13 +1,15 @@
 import 'dart:core';
 
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:stop_watch_timer/stop_watch_timer.dart';
-import 'package:timer_team/nameObject.dart';
+import 'package:timer_team/models/user_object.dart';
 
-import 'DateTimeObject.dart';
-import 'database.dart';
+import 'fire_database.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -37,9 +39,7 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final databaseHelper = DatabaseHelper();
-  List name = [];
-  List<DateTimeObject> date = [];
+  List<UserObject> users = [];
   final _formKey = GlobalKey<FormState>();
   String _firstName = '';
   String _lastName = '';
@@ -52,52 +52,43 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   void initState() {
-    databaseHelper.database;
     getAllName();
     super.initState();
   }
 
   getAllName() {
+    FireDatabase()
+        .getAllUsers()
+        .then((value) => {refreshUsers(listUsers: value)});
+  }
+
+  refreshUsers({required List<UserObject> listUsers}) {
     int nb;
-    databaseHelper.getAllName().then((value) => name = value).then((value) => {
-          print(value),
-          nb = name.length - listTimer.length,
-          if (name.length > listTimer.length)
-            {
-              for (var i = 0; i <= nb; i++)
-                {
-                  listTimer.add(StopWatchTimer()),
-                  timerStart.add(false),
-                  timervalue.add(0),
-                  dayOver.add(false)
-                },
-            },
-          value.forEach((element) async {
-            int val = await calcTimeWeek(element.id!, 1) +
-                await calcTimeWeek(element.id!, 2) +
-                await calcTimeWeek(element.id!, 3) +
-                await calcTimeWeek(element.id!, 4) +
-                await calcTimeWeek(element.id!, 5);
-            globaltime.add(val);
-          })
-        });
-  }
-
-  calcTimeWeek(int id, int day) async {
-    return Future.value(await databaseHelper.getDateTimeObjectWithDate(id,
-        DateTime.now().subtract(Duration(days: DateTime.now().weekday - day))));
-  }
-
-  getAllTimeOfName(int id) {
-    return databaseHelper.getNameTimeObject(id);
-  }
-
-  getAllTime() {
-    databaseHelper.getAllDatetime().then((value) => date = value);
-  }
-
-  checkIfDayOver(int id) {
-    return databaseHelper.getDateTimeObject(id);
+    if (mounted) {
+      setState(() {
+        users = listUsers;
+        nb = users.length - listTimer.length;
+        if (users.length > listTimer.length) {
+          for (var i = 0; i <= nb; i++) {
+            listTimer.add(StopWatchTimer());
+            timerStart.add(false);
+            timervalue.add(0);
+            dayOver.add(false);
+          }
+        }
+      });
+    } else {
+      users = listUsers;
+      nb = users.length - listTimer.length;
+      if (users.length > listTimer.length) {
+        for (var i = 0; i <= nb; i++) {
+          listTimer.add(StopWatchTimer());
+          timerStart.add(false);
+          timervalue.add(0);
+          dayOver.add(false);
+        }
+      }
+    }
   }
 
   popUpAddPerson() {
@@ -150,14 +141,15 @@ class _MyHomePageState extends State<MyHomePage> {
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
                     _formKey.currentState!.save();
-                    final nameObject = NameObject(
-                      firstName: _firstName,
-                      lastName: _lastName,
-                    );
-                    databaseHelper.insertName(nameObject).then((value) {
-                      getAllName();
-                      Navigator.pop(context);
-                    });
+                    FireDatabase()
+                        .addUser(
+                            nameObject: UserObject(
+                                firstName: _firstName,
+                                lastName: _lastName,
+                                id: '',
+                                monthTimerObject: []))
+                        .then((value) => refreshUsers(listUsers: value));
+                    Navigator.pop(context);
                   }
                 },
               ),
@@ -183,9 +175,9 @@ class _MyHomePageState extends State<MyHomePage> {
               flex: 5,
               fit: FlexFit.tight,
               child: ListView.builder(
-                itemCount: name.length,
+                itemCount: users.length,
                 itemBuilder: (context, index) {
-                  final nameObject = name[index];
+                  final nameObject = users[index];
                   return ListTile(
                     title: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -220,27 +212,27 @@ class _MyHomePageState extends State<MyHomePage> {
                             );
                           },
                         ),
-                        OutlinedButton(
-                            onPressed: () async => {
-                                  await checkIfDayOver(nameObject.id) == null
-                                      ? {
-                                          await databaseHelper
-                                              .insertDatetime(DateTimeObject(
-                                            nameId: nameObject.id,
-                                            time: timervalue[index].toInt(),
-                                            date: DateTime(now.year, now.month,
-                                                    now.day)
-                                                .millisecondsSinceEpoch,
-                                          )),
-                                          listTimer[index].onResetTimer(),
-                                          setState(() {
-                                            timerStart[index] =
-                                                !timerStart[index];
-                                          })
-                                        }
-                                      : {}
-                                },
-                            child: Text("Fin de journée")),
+                        verifDayTimer(nameObject: nameObject)
+                            ? OutlinedButton(
+                                onPressed: () => {},
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.grey,
+                                ),
+                                child: const Text("Fin de journée"))
+                            : OutlinedButton(
+                                onPressed: () => {
+                                      timerStart[index]
+                                          ? listTimer[index].onStopTimer()
+                                          : listTimer[index].onStartTimer(),
+                                      setState(() {
+                                        timerStart[index] = !timerStart[index];
+                                      }),
+                                      FireDatabase().addDateTimer(
+                                        nameObject: nameObject,
+                                        timerDay: timervalue[index].toInt(),
+                                      ),
+                                    },
+                                child: const Text("Fin de journée")),
                       ],
                     ),
                   );
@@ -250,35 +242,42 @@ class _MyHomePageState extends State<MyHomePage> {
             Column(
               children: [
                 const Text("WeekTime"),
-                SizedBox(
-                  width: MediaQuery.of(context).size.width,
-                  height: 60,
-                  child: ListView.builder(
-                    itemCount: name.length,
-                    scrollDirection: Axis.horizontal,
-                    itemBuilder: (context, index) {
-                      final nameObject = name[index];
-                      return Container(
-                        height: 50,
-                        width: 200,
-                        child: ListTile(
-                          title: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              Text(
-                                  '${nameObject.firstName} ${nameObject.lastName.toString()[0].toUpperCase()} => ${StopWatchTimer.getDisplayTimeHours(globaltime[index])} - ${StopWatchTimer.getDisplayTimeMinute(globaltime[index], hours: true)}'),
-                            ],
-                          ),
+                users.isNotEmpty && false
+                    ? SizedBox(
+                        width: MediaQuery.of(context).size.width,
+                        height: 60,
+                        child: ListView.builder(
+                          itemCount: users.length,
+                          scrollDirection: Axis.horizontal,
+                          itemBuilder: (context, index) {
+                            final nameObject = users[index];
+                            return Container(
+                              height: 50,
+                              width: 200,
+                              child: ListTile(
+                                title: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceAround,
+                                  children: [
+                                    Text(
+                                        '${nameObject.firstName} ${nameObject.lastName.toString()[0].toUpperCase()} => ${StopWatchTimer.getDisplayTimeHours(globaltime[index])} - ${StopWatchTimer.getDisplayTimeMinute(globaltime[index], hours: true)}'),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-                ),
+                      )
+                    : Container(),
               ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  bool verifDayTimer({required UserObject nameObject}) {
+    return FireDatabase().verifIfUserSaveTimerToday(nameObject: nameObject);
   }
 }

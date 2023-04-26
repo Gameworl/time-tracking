@@ -1,0 +1,83 @@
+{
+  "project_info": {
+    "project_number": "559234511546",
+    "firebase_url": "https://educacode-codapagos-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "educacode-codapagos",
+    "storage_bucket": "educacode-codapagos.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:559234511546:android:f0e95a255dd687df21c883",
+        "android_client_info": {
+          "package_name": "com.educacode.codapagos.codapagos"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "559234511546-q57qhc32822girrf9ibmu9fqk9c3sblg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAiFVN9xAH75J03OmdBOodaUlXT4V6j1ek"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "559234511546-q57qhc32822girrf9ibmu9fqk9c3sblg.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "559234511546-bv9maeo9i2nm516lbfb5i3kr1s862rti.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.timerTeam"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:559234511546:android:bcfaabb86da7151621c883",
+        "android_client_info": {
+          "package_name": "com.example.timer_team"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "559234511546-q57qhc32822girrf9ibmu9fqk9c3sblg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAiFVN9xAH75J03OmdBOodaUlXT4V6j1ek"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "559234511546-q57qhc32822girrf9ibmu9fqk9c3sblg.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "559234511546-bv9maeo9i2nm516lbfb5i3kr1s862rti.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.timerTeam"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
