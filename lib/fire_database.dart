@@ -220,4 +220,36 @@ class FireDatabase {
 
     return verif;
   }
+
+  DayTimerObject? getDayTimerObjectOfUser(UserObject user) {
+    DayTimerObject? dayTimerObject;
+    DateTime dateTime = DateTime.now();
+    String keyDateDay = '${dateTime.day}-${dateTime.month}-${dateTime.year}';
+    String keyDateMonth = '${dateTime.month}-${dateTime.year}';
+    final firstJan = DateTime(dateTime.year, 1, 1);
+    final weekNumber = _weeksBetween(firstJan, dateTime);
+
+    if (user.monthTimerObject.isNotEmpty) {
+      MonthTimerObject? monthTimerObject = user.monthTimerObject
+          .firstWhereOrNull((element) => element.id == keyDateMonth);
+      if (monthTimerObject != null &&
+          monthTimerObject.weekTimerObject.isNotEmpty) {
+        WeekTimerObject? weekTimerObject = monthTimerObject.weekTimerObject
+            .firstWhereOrNull((element) => element.id == weekNumber.toString());
+        if (weekTimerObject != null &&
+            weekTimerObject.dayTimerObject.isNotEmpty) {
+          weekTimerObject.dayTimerObject
+              .firstWhereOrNull((element) => element.id == keyDateDay);
+          if (weekTimerObject.dayTimerObject
+                  .firstWhereOrNull((element) => element.id == keyDateDay) !=
+              null) {
+            dayTimerObject = weekTimerObject.dayTimerObject
+                .firstWhere((element) => element.id == keyDateDay);
+          }
+        }
+      }
+    }
+
+    return dayTimerObject;
+  }
 }

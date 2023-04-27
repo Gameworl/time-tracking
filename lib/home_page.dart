@@ -198,20 +198,36 @@ class _MyHomePage2State extends State<MyHomePage2> {
     if (mounted) {
       setState(() {
         users = listUsers;
-        for (var element in users) {
-          listTimer.add(StopWatchTimer());
+        for (var user in users) {
+          StopWatchTimer stopWatchTimer = StopWatchTimer();
+          int timerValue = 0;
+          DayTimerObject? dayTimerObject =
+              FireDatabase().getDayTimerObjectOfUser(user);
+          if (dayTimerObject != null) {
+            stopWatchTimer.setPresetTime(mSec: dayTimerObject.timerDurationDay);
+            timerValue = dayTimerObject.timerDurationDay;
+          }
+          listTimer.add(stopWatchTimer);
           timerStart.add(false);
-          timervalue.add(0);
-          dayOver.add(verifDayTimer(nameObject: element));
+          timervalue.add(timerValue);
+          dayOver.add(verifDayTimer(nameObject: user));
         }
       });
     } else {
       users = listUsers;
-      for (var element in users) {
-        listTimer.add(StopWatchTimer());
+      for (var user in users) {
+        StopWatchTimer stopWatchTimer = StopWatchTimer();
+        int timerValue = 0;
+        DayTimerObject? dayTimerObject =
+            FireDatabase().getDayTimerObjectOfUser(user);
+        if (dayTimerObject != null) {
+          stopWatchTimer.setPresetTime(mSec: dayTimerObject.timerDurationDay);
+          timerValue = dayTimerObject.timerDurationDay;
+        }
+        listTimer.add(stopWatchTimer);
         timerStart.add(false);
-        timervalue.add(0);
-        dayOver.add(verifDayTimer(nameObject: element));
+        timervalue.add(timerValue);
+        dayOver.add(verifDayTimer(nameObject: user));
       }
     }
   }
@@ -221,7 +237,7 @@ class _MyHomePage2State extends State<MyHomePage2> {
           if (mounted)
             {
               setState(() => {
-                    userSelected = user,
+                    userSelected = value,
                     onUserSelected = true,
                     _onDaySelected(DateTime.now(), DateTime.now()),
                     _getEventsForDay(DateTime.now()),
@@ -229,7 +245,7 @@ class _MyHomePage2State extends State<MyHomePage2> {
             }
           else
             {
-              userSelected = user,
+              userSelected = value,
               onUserSelected = true,
               _onDaySelected(DateTime.now(), DateTime.now()),
             }
@@ -694,8 +710,9 @@ class _MyHomePage2State extends State<MyHomePage2> {
   String getHourMinuteFormat(int timer) {
     String hour = StopWatchTimer.getDisplayTimeHours(timer);
     String minute = StopWatchTimer.getDisplayTimeMinute(timer, hours: true);
+    String seconds = StopWatchTimer.getDisplayTimeSecond(timer);
 
-    return '$hour:$minute';
+    return '$hour:$minute:$seconds';
   }
 
   String getHourSupp(List<Event> events) {
