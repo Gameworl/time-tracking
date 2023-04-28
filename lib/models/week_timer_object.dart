@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:timer_team/models/day_timer_object.dart';
 
 class WeekTimerObject {
@@ -17,7 +19,7 @@ class WeekTimerObject {
       'id': id,
       'timerDurationWeek': timerDurationWeek,
       'isFourDaysWeek': isFourDaysWeek,
-      'dayTimerObject': dayTimerObject,
+      'dayTimerObject': dayTimerObject.toString(),
     };
   }
 
@@ -28,5 +30,17 @@ class WeekTimerObject {
       isFourDaysWeek: map['isFourDaysWeek'],
       dayTimerObject: map['dayTimerObject'],
     );
+  }
+
+  @override
+  String toString() {
+    // TODO: implement toString
+
+    return jsonEncode(WeekTimerObject(
+            id: id,
+            timerDurationWeek: timerDurationWeek,
+            isFourDaysWeek: isFourDaysWeek,
+            dayTimerObject: dayTimerObject)
+        .toMap());
   }
 }

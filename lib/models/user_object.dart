@@ -1,23 +1,28 @@
-import 'month_timer_object.dart';
+import 'dart:convert';
+
+import 'package:timer_team/models/week_timer_object.dart';
 
 class UserObject {
   String id;
   String firstName;
   String lastName;
-  List<MonthTimerObject> monthTimerObject;
+  String? linkImage;
+  List<WeekTimerObject> weekTimerObject;
 
   UserObject(
       {required this.id,
       required this.firstName,
       required this.lastName,
-      required this.monthTimerObject});
+      this.linkImage,
+      required this.weekTimerObject});
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'firstName': firstName,
       'lastName': lastName,
-      'monthTimerObject': monthTimerObject,
+      'linkImage': linkImage ?? "",
+      'weekTimerObject': weekTimerObject.toString(),
     };
   }
 
@@ -26,7 +31,21 @@ class UserObject {
       id: map['id'],
       firstName: map['firstName'],
       lastName: map['lastName'],
-      monthTimerObject: map['monthTimerObject'],
+      weekTimerObject: map['weekTimerObject'],
+      linkImage: map['linkImage'] ?? "",
     );
+  }
+
+  @override
+  String toString() {
+    // TODO: implement toString
+
+    return jsonEncode(UserObject(
+            id: id,
+            firstName: firstName,
+            lastName: lastName,
+            linkImage: linkImage ?? "",
+            weekTimerObject: weekTimerObject)
+        .toMap());
   }
 }

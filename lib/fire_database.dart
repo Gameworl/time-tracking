@@ -1,9 +1,10 @@
 import 'package:collection/collection.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:timer_team/models/day_timer_object.dart';
-import 'package:timer_team/models/month_timer_object.dart';
 import 'package:timer_team/models/user_object.dart';
 import 'package:timer_team/models/week_timer_object.dart';
+
+import 'fire_storage.dart';
 
 class FireDatabase {
   DatabaseReference ref = FirebaseDatabase.instance.ref();
@@ -30,33 +31,27 @@ class FireDatabase {
       usersFirebase = Map.fromEntries(usersFirebase.entries.toList()
         ..sort((e1, e2) => e1.key.compareTo(e2.key)));
       usersFirebase.forEach((key, value) {
-        List<MonthTimerObject> listMonthTimerObject = [];
-        (value["month"] as Map?)?.forEach((keyMonth, valueMonth) {
-          List<WeekTimerObject> listWeekTimerObject = [];
-          (valueMonth["week"] as Map?)?.forEach((keyWeek, valueWeek) {
-            List<DayTimerObject> listDayTimerObject = [];
-            (valueWeek["day"] as Map?)?.forEach((keyDay, valueDay) {
-              listDayTimerObject.add(DayTimerObject(
-                  id: keyDay, timerDurationDay: valueDay['timerDurationDay']));
-            });
-            listWeekTimerObject.add(WeekTimerObject(
-                id: keyWeek,
-                timerDurationWeek: valueWeek['timerDurationWeek'],
-                isFourDaysWeek: valueWeek['isFourDaysWeek'],
-                dayTimerObject: listDayTimerObject));
+        List<WeekTimerObject> listWeekTimerObject = [];
+        (value["week"] as Map?)?.forEach((keyWeek, valueWeek) {
+          List<DayTimerObject> listDayTimerObject = [];
+          (valueWeek["day"] as Map?)?.forEach((keyDay, valueDay) {
+            listDayTimerObject.add(DayTimerObject(
+                id: keyDay, timerDurationDay: valueDay['timerDurationDay']));
           });
-          listMonthTimerObject.add(MonthTimerObject(
-              id: keyMonth,
-              timerDurationMonth: valueMonth['timerDurationMonth'],
-              weekTimerObject: listWeekTimerObject));
+          listWeekTimerObject.add(WeekTimerObject(
+              id: keyWeek,
+              timerDurationWeek: valueWeek['timerDurationWeek'] ?? 0,
+              isFourDaysWeek: valueWeek['isFourDaysWeek'] ?? true,
+              dayTimerObject: listDayTimerObject));
         });
 
         users.add(
           UserObject(
-              id: key,
-              firstName: value["firstname"],
-              lastName: value["lastname"],
-              monthTimerObject: listMonthTimerObject),
+            id: key,
+            firstName: value["firstname"],
+            lastName: value["lastname"],
+            weekTimerObject: listWeekTimerObject,
+          ),
         );
       });
     }
@@ -69,32 +64,29 @@ class FireDatabase {
     userFirebase = refUsersGet.value as Map?;
 
     if (userFirebase != null) {
-      List<MonthTimerObject> listMonthTimerObject = [];
-      (userFirebase["month"] as Map?)?.forEach((keyMonth, valueMonth) {
-        List<WeekTimerObject> listWeekTimerObject = [];
-        (valueMonth["week"] as Map?)?.forEach((keyWeek, valueWeek) {
-          List<DayTimerObject> listDayTimerObject = [];
-          (valueWeek["day"] as Map?)?.forEach((keyDay, valueDay) {
-            listDayTimerObject.add(DayTimerObject(
-                id: keyDay, timerDurationDay: valueDay['timerDurationDay']));
-          });
-          listWeekTimerObject.add(WeekTimerObject(
-              id: keyWeek,
-              timerDurationWeek: valueWeek['timerDurationWeek'],
-              isFourDaysWeek: valueWeek['isFourDaysWeek'],
-              dayTimerObject: listDayTimerObject));
+      List<WeekTimerObject> listWeekTimerObject = [];
+      (userFirebase["week"] as Map?)?.forEach((keyWeek, valueWeek) {
+        List<DayTimerObject> listDayTimerObject = [];
+        (valueWeek["day"] as Map?)?.forEach((keyDay, valueDay) {
+          listDayTimerObject.add(DayTimerObject(
+              id: keyDay, timerDurationDay: valueDay['timerDurationDay']));
         });
-        listMonthTimerObject.add(MonthTimerObject(
-            id: keyMonth,
-            timerDurationMonth: valueMonth['timerDurationMonth'],
-            weekTimerObject: listWeekTimerObject));
+        listWeekTimerObject.add(WeekTimerObject(
+            id: keyWeek,
+            timerDurationWeek: valueWeek['timerDurationWeek'] ?? 0,
+            isFourDaysWeek: valueWeek['isFourDaysWeek'] ?? true,
+            dayTimerObject: listDayTimerObject));
       });
 
+      String? imageLink = await FireStorage().getImageUser(idUser: user.id);
+
       user = UserObject(
-          id: user.id,
-          firstName: userFirebase["firstname"],
-          lastName: userFirebase["lastname"],
-          monthTimerObject: listMonthTimerObject);
+        id: user.id,
+        firstName: userFirebase["firstname"],
+        lastName: userFirebase["lastname"],
+        weekTimerObject: listWeekTimerObject,
+        linkImage: imageLink,
+      );
       return Future.value(user);
     } else {
       return Future.value(user);
@@ -112,33 +104,14 @@ class FireDatabase {
     DateTime dateTime = DateTime.now();
 
     /**
-     * Month add timer
-     */
-    String keyDateMonth = '${dateTime.month}-${dateTime.year}';
-    final monthChild = ref.child(
-        "users/${nameObject.id}/month/$keyDateMonth"); // generates a new child with a unique ID
-    Map? monthFirebase = {};
-    int timerMonth = timerDay;
-    monthChild.get().then((value) => {
-          monthFirebase = value.value as Map?,
-          if (monthFirebase != null &&
-              monthFirebase!['timerDurationMonth'] != null)
-            {
-              timerMonth = monthFirebase!['timerDurationMonth'] + timerDay,
-            },
-          monthChild.update({
-            'timerDurationMonth': timerMonth,
-          }),
-        });
-
-    /**
      * Week add timer
      */
     final now = DateTime.now();
     final firstJan = DateTime(now.year, 1, 1);
     final weekNumber = _weeksBetween(firstJan, now);
+    final weekKey = '${weekNumber}_${now.year}';
     final weekChild = ref.child(
-        "users/${nameObject.id}/month/$keyDateMonth/week/$weekNumber"); // generates a new child with a unique ID
+        "users/${nameObject.id}/week/$weekKey"); // generates a new child with a unique ID
     Map? weekFirebase = {};
     int timerWeek = timerDay;
     weekChild.get().then((value) => {
@@ -162,6 +135,7 @@ class FireDatabase {
                 'isFourDaysWeek': true,
               }),
             },
+          print(timerWeek),
           weekChild.update({
             'timerDurationWeek': timerWeek,
           }),
@@ -172,7 +146,7 @@ class FireDatabase {
      */
     String keyDateDay = '${dateTime.day}-${dateTime.month}-${dateTime.year}';
     final dayChild = ref.child(
-        "users/${nameObject.id}/month/$keyDateMonth/week/$weekNumber/day/$keyDateDay"); // generates a new child with a unique ID
+        "users/${nameObject.id}/week/$weekKey/day/$keyDateDay"); // generates a new child with a unique ID
     Map? dayFirebase = {};
     int timerDayFirebase = timerDay;
     dayChild.get().then((value) => {
@@ -192,28 +166,23 @@ class FireDatabase {
   bool verifIfUserSaveTimerToday({required UserObject nameObject}) {
     DateTime dateTime = DateTime.now();
     String keyDateDay = '${dateTime.day}-${dateTime.month}-${dateTime.year}';
-    String keyDateMonth = '${dateTime.month}-${dateTime.year}';
     final firstJan = DateTime(dateTime.year, 1, 1);
     final weekNumber = _weeksBetween(firstJan, dateTime);
+    final weekKey = '${weekNumber}_${dateTime.year}';
 
     bool verif = false;
 
-    if (nameObject.monthTimerObject.isNotEmpty) {
-      MonthTimerObject? monthTimerObject = nameObject.monthTimerObject
-          .firstWhereOrNull((element) => element.id == keyDateMonth);
-      if (monthTimerObject != null &&
-          monthTimerObject.weekTimerObject.isNotEmpty) {
-        WeekTimerObject? weekTimerObject = monthTimerObject.weekTimerObject
-            .firstWhereOrNull((element) => element.id == weekNumber.toString());
-        if (weekTimerObject != null &&
-            weekTimerObject.dayTimerObject.isNotEmpty) {
-          weekTimerObject.dayTimerObject
-              .firstWhereOrNull((element) => element.id == keyDateDay);
-          if (weekTimerObject.dayTimerObject
-                  .firstWhereOrNull((element) => element.id == keyDateDay) !=
-              null) {
-            verif = true;
-          }
+    if (nameObject.weekTimerObject.isNotEmpty) {
+      WeekTimerObject? weekTimerObject = nameObject.weekTimerObject
+          .firstWhereOrNull((element) => element.id == weekKey);
+      if (weekTimerObject != null &&
+          weekTimerObject.dayTimerObject.isNotEmpty) {
+        weekTimerObject.dayTimerObject
+            .firstWhereOrNull((element) => element.id == keyDateDay);
+        if (weekTimerObject.dayTimerObject
+                .firstWhereOrNull((element) => element.id == keyDateDay) !=
+            null) {
+          verif = true;
         }
       }
     }
@@ -225,31 +194,81 @@ class FireDatabase {
     DayTimerObject? dayTimerObject;
     DateTime dateTime = DateTime.now();
     String keyDateDay = '${dateTime.day}-${dateTime.month}-${dateTime.year}';
-    String keyDateMonth = '${dateTime.month}-${dateTime.year}';
     final firstJan = DateTime(dateTime.year, 1, 1);
     final weekNumber = _weeksBetween(firstJan, dateTime);
+    final weekKey = '${weekNumber}_${dateTime.year}';
 
-    if (user.monthTimerObject.isNotEmpty) {
-      MonthTimerObject? monthTimerObject = user.monthTimerObject
-          .firstWhereOrNull((element) => element.id == keyDateMonth);
-      if (monthTimerObject != null &&
-          monthTimerObject.weekTimerObject.isNotEmpty) {
-        WeekTimerObject? weekTimerObject = monthTimerObject.weekTimerObject
-            .firstWhereOrNull((element) => element.id == weekNumber.toString());
-        if (weekTimerObject != null &&
-            weekTimerObject.dayTimerObject.isNotEmpty) {
-          weekTimerObject.dayTimerObject
-              .firstWhereOrNull((element) => element.id == keyDateDay);
-          if (weekTimerObject.dayTimerObject
-                  .firstWhereOrNull((element) => element.id == keyDateDay) !=
-              null) {
-            dayTimerObject = weekTimerObject.dayTimerObject
-                .firstWhere((element) => element.id == keyDateDay);
-          }
+    if (user.weekTimerObject.isNotEmpty) {
+      WeekTimerObject? weekTimerObject = user.weekTimerObject
+          .firstWhereOrNull((element) => element.id == weekKey);
+      if (weekTimerObject != null &&
+          weekTimerObject.dayTimerObject.isNotEmpty) {
+        weekTimerObject.dayTimerObject
+            .firstWhereOrNull((element) => element.id == keyDateDay);
+        if (weekTimerObject.dayTimerObject
+                .firstWhereOrNull((element) => element.id == keyDateDay) !=
+            null) {
+          dayTimerObject = weekTimerObject.dayTimerObject
+              .firstWhere((element) => element.id == keyDateDay);
         }
       }
     }
 
     return dayTimerObject;
+  }
+
+  Future<UserObject> switchWeekTypeOfUser(
+      {required UserObject user,
+      required DateTime dateTime,
+      required bool isFourDaysWeek}) async {
+    /**
+     * Week add timer
+     */
+
+    final firstJan = DateTime(dateTime.year, 1, 1);
+    final weekNumber = _weeksBetween(firstJan, dateTime);
+    final weekKey = '${weekNumber}_${dateTime.year}';
+    final weekChild = ref.child(
+        "users/${user.id}/week/$weekKey"); // generates a new child with a unique ID
+    Map? weekFirebase = {};
+    weekChild.get().then((value) => {
+          weekFirebase = value.value as Map?,
+          if (weekFirebase != null)
+            {
+              if (weekFirebase!['isFourDaysWeek'] == null)
+                {
+                  weekChild.update({
+                    'isFourDaysWeek': !isFourDaysWeek,
+                  }),
+                }
+              else
+                {
+                  weekChild.update({
+                    'isFourDaysWeek': !isFourDaysWeek,
+                  }),
+                },
+            }
+          else
+            {
+              weekChild.update({
+                'isFourDaysWeek': !isFourDaysWeek,
+              }),
+            },
+        });
+    return getUser(user: user);
+  }
+
+  WeekTimerObject? getWeekOfUser(
+      {required UserObject user, required DateTime dateTime}) {
+    WeekTimerObject? weekTimerObjectFinal;
+    final firstJan = DateTime(dateTime.year, 1, 1);
+    final weekNumber = _weeksBetween(firstJan, dateTime);
+    final weekKey = '${weekNumber}_${dateTime.year}';
+
+    if (user.weekTimerObject.isNotEmpty) {
+      return user.weekTimerObject
+          .firstWhereOrNull((element) => element.id == weekKey);
+    }
+    return weekTimerObjectFinal;
   }
 }

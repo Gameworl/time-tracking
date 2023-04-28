@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class DayTimerObject {
   String id;
   int timerDurationDay;
@@ -18,10 +20,11 @@ class DayTimerObject {
     );
   }
 
-  DayTimerObject fromFirebase(Map<String, dynamic> map) {
-    return DayTimerObject(
-      id: map['id'],
-      timerDurationDay: map['timerDurationDay'],
-    );
+  @override
+  String toString() {
+    // TODO: implement toString
+
+    return jsonEncode(
+        DayTimerObject(id: id, timerDurationDay: timerDurationDay).toMap());
   }
 }

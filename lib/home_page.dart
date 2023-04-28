@@ -1,12 +1,15 @@
 import 'dart:core';
+import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:stop_watch_timer/stop_watch_timer.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:timer_team/fire_storage.dart';
 import 'package:timer_team/models/day_timer_object.dart';
-import 'package:timer_team/models/month_timer_object.dart';
 import 'package:timer_team/models/week_timer_object.dart';
 
 import 'fire_database.dart';
@@ -44,6 +47,9 @@ class _MyHomePage2State extends State<MyHomePage2> {
   List<int> globaltime = [];
   final now = DateTime.now();
 
+  final ImagePicker _picker = ImagePicker();
+  XFile? imageUser;
+
   @override
   void initState() {
     super.initState();
@@ -75,40 +81,34 @@ class _MyHomePage2State extends State<MyHomePage2> {
     List<Event> eventsForDay = [];
     // Implementation example
     String keyDateDay = '${day.day}-${day.month}-${day.year}';
-    String keyDateMonth = '${day.month}-${day.year}';
     final firstJan = DateTime(day.year, 1, 1);
     final weekNumber = _weeksBetween(firstJan, day);
+    final weekKey = '${weekNumber}_${day.year}';
 
     int dayTime = 0;
     int weekTime = 0;
     bool isFourDaysWeek = true;
 
     if (userSelected != null &&
-        userSelected!.monthTimerObject
-                .firstWhereOrNull((m) => m.id == keyDateMonth) !=
+        userSelected!.weekTimerObject
+                .firstWhereOrNull((element) => element.id == weekKey) !=
             null) {
-      MonthTimerObject monthTimerObject = userSelected!.monthTimerObject
-          .firstWhere((m) => m.id == keyDateMonth);
-      if (monthTimerObject.weekTimerObject.firstWhereOrNull(
-              (element) => element.id == weekNumber.toString()) !=
+      WeekTimerObject weekTimerObject = userSelected!.weekTimerObject
+          .firstWhere((element) => element.id == weekKey);
+      weekTime = weekTimerObject.timerDurationWeek;
+      '${StopWatchTimer.getDisplayTimeHours(weekTimerObject.timerDurationWeek)}:${StopWatchTimer.getDisplayTimeMinute(weekTimerObject.timerDurationWeek)}';
+      isFourDaysWeek = weekTimerObject.isFourDaysWeek;
+      if (weekTimerObject.dayTimerObject
+              .firstWhereOrNull((element) => element.id == keyDateDay) !=
           null) {
-        WeekTimerObject weekTimerObject = monthTimerObject.weekTimerObject
-            .firstWhere((element) => element.id == weekNumber.toString());
-        weekTime = weekTimerObject.timerDurationWeek;
-        '${StopWatchTimer.getDisplayTimeHours(weekTimerObject.timerDurationWeek)}:${StopWatchTimer.getDisplayTimeMinute(weekTimerObject.timerDurationWeek)}';
-        isFourDaysWeek = weekTimerObject.isFourDaysWeek;
-        if (weekTimerObject.dayTimerObject
-                .firstWhereOrNull((element) => element.id == keyDateDay) !=
-            null) {
-          DayTimerObject dayTimerObject = weekTimerObject.dayTimerObject
-              .firstWhere((element) => element.id == keyDateDay);
-          dayTime = dayTimerObject.timerDurationDay;
-          '${StopWatchTimer.getDisplayTimeHours(dayTimerObject.timerDurationDay)}:${StopWatchTimer.getDisplayTimeMinute(dayTimerObject.timerDurationDay)}';
-          eventsForDay.add(Event(
-              dayTime: dayTime,
-              weekTime: weekTime,
-              isFourDaysWeek: isFourDaysWeek));
-        }
+        DayTimerObject dayTimerObject = weekTimerObject.dayTimerObject
+            .firstWhere((element) => element.id == keyDateDay);
+        dayTime = dayTimerObject.timerDurationDay;
+        '${StopWatchTimer.getDisplayTimeHours(dayTimerObject.timerDurationDay)}:${StopWatchTimer.getDisplayTimeMinute(dayTimerObject.timerDurationDay)}';
+        eventsForDay.add(Event(
+            dayTime: dayTime,
+            weekTime: weekTime,
+            isFourDaysWeek: isFourDaysWeek));
       }
     }
     return eventsForDay;
@@ -121,38 +121,32 @@ class _MyHomePage2State extends State<MyHomePage2> {
     // Implementation example
     for (var day in days) {
       String keyDateDay = '${day.day}-${day.month}-${day.year}';
-      String keyDateMonth = '${day.month}-${day.year}';
       final firstJan = DateTime(day.year, 1, 1);
       final weekNumber = _weeksBetween(firstJan, day);
+      final weekKey = '${weekNumber}_${day.year}';
 
       int dayTime = 0;
       int weekTime = 0;
       bool isFourDaysWeek = true;
 
       if (userSelected != null &&
-          userSelected!.monthTimerObject
-                  .firstWhereOrNull((m) => m.id == keyDateMonth) !=
+          userSelected!.weekTimerObject
+                  .firstWhereOrNull((element) => element.id == weekKey) !=
               null) {
-        MonthTimerObject monthTimerObject = userSelected!.monthTimerObject
-            .firstWhere((m) => m.id == keyDateMonth);
-        if (monthTimerObject.weekTimerObject.firstWhereOrNull(
-                (element) => element.id == weekNumber.toString()) !=
+        WeekTimerObject weekTimerObject = userSelected!.weekTimerObject
+            .firstWhere((element) => element.id == weekKey);
+        weekTime = weekTimerObject.timerDurationWeek;
+        isFourDaysWeek = weekTimerObject.isFourDaysWeek;
+        if (weekTimerObject.dayTimerObject
+                .firstWhereOrNull((element) => element.id == keyDateDay) !=
             null) {
-          WeekTimerObject weekTimerObject = monthTimerObject.weekTimerObject
-              .firstWhere((element) => element.id == weekNumber.toString());
-          weekTime = weekTimerObject.timerDurationWeek;
-          isFourDaysWeek = weekTimerObject.isFourDaysWeek;
-          if (weekTimerObject.dayTimerObject
-                  .firstWhereOrNull((element) => element.id == keyDateDay) !=
-              null) {
-            DayTimerObject dayTimerObject = weekTimerObject.dayTimerObject
-                .firstWhere((element) => element.id == keyDateDay);
-            dayTime = dayTimerObject.timerDurationDay;
-            eventsForDay.add(Event(
-                dayTime: dayTime,
-                weekTime: weekTime,
-                isFourDaysWeek: isFourDaysWeek));
-          }
+          DayTimerObject dayTimerObject = weekTimerObject.dayTimerObject
+              .firstWhere((element) => element.id == keyDateDay);
+          dayTime = dayTimerObject.timerDurationDay;
+          eventsForDay.add(Event(
+              dayTime: dayTime,
+              weekTime: weekTime,
+              isFourDaysWeek: isFourDaysWeek));
         }
       }
     }
@@ -188,9 +182,8 @@ class _MyHomePage2State extends State<MyHomePage2> {
         _rangeEnd = null;
         _rangeSelectionMode = RangeSelectionMode.toggledOff;
         onUserSelected = false;
+        _selectedEvent.value = _getEventsForDay(selectedDay);
       });
-
-      _selectedEvent.value = _getEventsForDay(selectedDay);
     }
   }
 
@@ -230,6 +223,20 @@ class _MyHomePage2State extends State<MyHomePage2> {
         dayOver.add(verifDayTimer(nameObject: user));
       }
     }
+    refreshImageUsers(listUsers: listUsers);
+  }
+
+  refreshImageUsers({required List<UserObject> listUsers}) async {
+    for (var user in listUsers) {
+      String? imageLink;
+      try {
+        imageLink = await FireStorage().getImageUser(idUser: user.id);
+      } on FirebaseException catch (e) {
+        print("failed to upload to FireStorage : $e");
+      }
+      user.linkImage = imageLink;
+    }
+    setState(() => users = listUsers);
   }
 
   refreshUser({required UserObject user}) {
@@ -248,8 +255,20 @@ class _MyHomePage2State extends State<MyHomePage2> {
               userSelected = value,
               onUserSelected = true,
               _onDaySelected(DateTime.now(), DateTime.now()),
-            }
+              _getEventsForDay(DateTime.now()),
+            },
+          refreshImageUser(user: user),
         });
+  }
+
+  refreshImageUser({required UserObject user}) async {
+    String? imageLink;
+    try {
+      imageLink = await FireStorage().getImageUser(idUser: user.id);
+    } on FirebaseException catch (e) {
+      print("failed to upload to FireStorage : $e");
+    }
+    setState(() => user.linkImage = imageLink);
   }
 
   popUpAddPerson() {
@@ -308,7 +327,7 @@ class _MyHomePage2State extends State<MyHomePage2> {
                                 firstName: _firstName,
                                 lastName: _lastName,
                                 id: '',
-                                monthTimerObject: []))
+                                weekTimerObject: []))
                         .then((value) => {
                               Navigator.pop(context),
                               setState(() => {
@@ -316,7 +335,7 @@ class _MyHomePage2State extends State<MyHomePage2> {
                                         firstName: _firstName,
                                         lastName: _lastName,
                                         id: value,
-                                        monthTimerObject: [])),
+                                        weekTimerObject: [])),
                                     listTimer.add(StopWatchTimer()),
                                     timerStart.add(false),
                                     timervalue.add(0),
@@ -324,6 +343,56 @@ class _MyHomePage2State extends State<MyHomePage2> {
                                   }),
                             });
                   }
+                },
+              ),
+            ],
+          );
+        });
+  }
+
+  popUpAddImagePerson({required UserObject userObject}) {
+    showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('Choose your mode !'),
+            actions: [
+              TextButton(
+                child: const Text('Leave'),
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+              ),
+              TextButton(
+                child: const Text('With Camera'),
+                onPressed: () {
+                  Navigator.pop(context);
+                  pickImageFromCamera().then((value) => {
+                        if (value != null)
+                          {
+                            FireStorage()
+                                .setImageUser(
+                                    userObject: userObject, image: value)
+                                .then((value) =>
+                                    refreshImageUser(user: userObject)),
+                          }
+                      });
+                },
+              ),
+              TextButton(
+                child: const Text('With Gallery'),
+                onPressed: () {
+                  Navigator.pop(context);
+                  pickImageFromGallery().then((value) => {
+                        if (value != null)
+                          {
+                            FireStorage()
+                                .setImageUser(
+                                    userObject: userObject, image: value)
+                                .then((value) =>
+                                    refreshImageUser(user: userObject)),
+                          }
+                      });
                 },
               ),
             ],
@@ -364,11 +433,19 @@ class _MyHomePage2State extends State<MyHomePage2> {
                             ),
                             child: Row(
                               children: [
-                                Container(
-                                  margin: const EdgeInsets.only(left: 30),
-                                  height: 130,
-                                  width: 130,
-                                  child: Image.asset("assets/test.png"),
+                                GestureDetector(
+                                  onTap: () async {
+                                    popUpAddImagePerson(userObject: user);
+                                  },
+                                  child: Container(
+                                    margin: const EdgeInsets.only(left: 30),
+                                    height: 130,
+                                    width: 130,
+                                    child: user.linkImage != null &&
+                                            user.linkImage != ""
+                                        ? Image.network(user.linkImage!)
+                                        : Image.asset('assets/test.png'),
+                                  ),
                                 ),
                                 const SizedBox(
                                   width: 30,
@@ -512,7 +589,7 @@ class _MyHomePage2State extends State<MyHomePage2> {
                               child: IconButton(
                                 onPressed: () => refreshUser(user: user),
                                 icon: Icon(
-                                  Icons.verified,
+                                  Icons.arrow_forward,
                                   size: 60,
                                   color: (userSelected != null &&
                                           userSelected!.id == user.id)
@@ -660,7 +737,15 @@ class _MyHomePage2State extends State<MyHomePage2> {
                                           style: TextStyle(fontSize: 20),
                                         ),
                                         Text(
-                                          getTimeWeek(_selectedEvent.value),
+                                          _selectedEvent.value.isNotEmpty
+                                              ? getTimeWeek(
+                                                  _selectedEvent.value)
+                                              : getTimeWeekWithoutEvent(
+                                                  isFourDaysWeekWithoutEvent(
+                                                      userSelected:
+                                                          userSelected!,
+                                                      selectedDay:
+                                                          _selectedDay)),
                                           style: const TextStyle(
                                               fontSize: 24,
                                               color: Color(0xffFE6A3C),
@@ -681,13 +766,53 @@ class _MyHomePage2State extends State<MyHomePage2> {
                                         Icons.date_range_sharp,
                                         size: 40,
                                       ),
-                                      onPressed: () {},
+                                      onPressed: () {
+                                        bool isFourDaysWeekVerif =
+                                            (_selectedEvent.value.isNotEmpty
+                                                ? isFourDaysWeek(
+                                                    events:
+                                                        _selectedEvent.value)
+                                                : isFourDaysWeekWithoutEvent(
+                                                            userSelected:
+                                                                userSelected!,
+                                                            selectedDay:
+                                                                _selectedDay) !=
+                                                        null
+                                                    ? isFourDaysWeekWithoutEvent(
+                                                            userSelected:
+                                                                userSelected!,
+                                                            selectedDay:
+                                                                _selectedDay)!
+                                                        .isFourDaysWeek
+                                                    : true);
+                                        switchWeekType(
+                                            userSelected: userSelected!,
+                                            selectedDay: _selectedDay!,
+                                            isFourDaysWeek:
+                                                isFourDaysWeekVerif);
+                                      },
                                     ),
                                     Padding(
                                       padding: const EdgeInsets.only(
                                           top: 15, left: 5),
                                       child: Text(
-                                          isFourDaysWeek(_selectedEvent.value)
+                                          (_selectedEvent.value.isNotEmpty
+                                                  ? isFourDaysWeek(
+                                                      events:
+                                                          _selectedEvent.value)
+                                                  : isFourDaysWeekWithoutEvent(
+                                                              userSelected:
+                                                                  userSelected!,
+                                                              selectedDay:
+                                                                  _selectedDay) !=
+                                                          null
+                                                      ? isFourDaysWeekWithoutEvent(
+                                                              userSelected:
+                                                                  userSelected!,
+                                                              selectedDay:
+                                                                  _selectedDay)!
+                                                          .isFourDaysWeek
+                                                      : true)
                                               ? "4"
                                               : "5",
                                           style: const TextStyle(
@@ -751,12 +876,74 @@ class _MyHomePage2State extends State<MyHomePage2> {
     return hourSupp;
   }
 
-  bool isFourDaysWeek(List<Event> events) {
+  String getTimeWeekWithoutEvent(WeekTimerObject? weekTimerObject) {
+    String hourSupp = '';
+    int hourSuppFinal = 0;
+    if (weekTimerObject != null) {
+      hourSuppFinal = weekTimerObject.timerDurationWeek;
+    }
+    hourSupp = getHourMinuteFormat(hourSuppFinal);
+    return hourSupp;
+  }
+
+  bool isFourDaysWeek({required List<Event> events}) {
     bool isFourDaysWeek = true;
     if (events.isNotEmpty) {
       isFourDaysWeek = events[0].isFourDaysWeek;
     }
     return isFourDaysWeek;
+  }
+
+  WeekTimerObject? isFourDaysWeekWithoutEvent(
+      {required DateTime? selectedDay, required UserObject userSelected}) {
+    WeekTimerObject? weekTimerObject;
+
+    if (selectedDay != null) {
+      weekTimerObject = FireDatabase()
+          .getWeekOfUser(user: userSelected, dateTime: selectedDay);
+    }
+
+    return weekTimerObject;
+  }
+
+  void switchWeekType(
+      {required UserObject userSelected,
+      required DateTime selectedDay,
+      required bool isFourDaysWeek}) {
+    FireDatabase()
+        .switchWeekTypeOfUser(
+            user: userSelected,
+            dateTime: selectedDay,
+            isFourDaysWeek: isFourDaysWeek)
+        .then((value) => {
+              refreshUser(user: userSelected),
+            });
+  }
+
+  Future<File?> pickImageFromCamera() async {
+    try {
+      var image = await ImagePicker().pickImage(source: ImageSource.camera);
+
+      if (image == null) return null;
+
+      return File(image.path);
+    } on PlatformException catch (e) {
+      print('Failed to pick image: $e');
+      return null;
+    }
+  }
+
+  Future<File?> pickImageFromGallery() async {
+    try {
+      var image = await ImagePicker().pickImage(source: ImageSource.gallery);
+
+      if (image == null) return null;
+
+      return File(image.path);
+    } on PlatformException catch (e) {
+      print('Failed to pick image: $e');
+      return null;
+    }
   }
 }
 
